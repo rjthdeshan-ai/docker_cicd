@@ -31,3 +31,20 @@ jobs:
           docker tag docker_cicd ghcr.io/${{ github.repository_owner }}/docker_cicd:$SHORT_SHA
           docker push ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
           docker push ghcr.io/${{ github.repository_owner }}/docker_cicd:$SHORT_SHA
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull published image from GHCR
+        run: docker pull ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+
+      - name: Run the published image (simulated deploy)
+        run: docker run ghcr.io/${{ github.repository_owner }}/docker_cicd:latest

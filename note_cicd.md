@@ -147,17 +147,59 @@ to `main` publishes **two** tags: `:latest` (always newest) and a permanent
 can roll back to any exact past build by its commit SHA instead of only
 ever having whatever `latest` currently points to.
 
+**Confirmed:** CI #8 (commit `ff05282`) ran green — the SHA-tagging step
+worked, publishing both `:latest` and `:ff05282` to GHCR.
+
+## Step 7: Simulated Deploy — auto-pull and run the published image (commit pending)
+
+Added a second job, `deploy`, to `ci.yml`:
+
+```yaml
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Pull published image from GHCR
+        run: docker pull ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+
+      - name: Run the published image (simulated deploy)
+        run: docker run ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+```
+
+**Why this matters / what it teaches:**
+- `needs: test` — new keyword. Forces `deploy` to wait until `test`
+  (build + test + publish) finishes successfully before it starts. Jobs
+  run in parallel by default, so without `needs:` this could try to pull
+  an image before it's published.
+- Each **job** gets its own fresh virtual machine — nothing is shared
+  between `test` and `deploy`, not even the locally-built image. That's
+  why `deploy` has to `docker login` again, and why it only does
+  `docker pull` + `docker run` — never `docker build`. This forces it to
+  prove the *published* artifact works, not just whatever was cached
+  locally in the previous job.
+- Result: every push to `main` now does the full loop automatically —
+  build → test → publish → **pull the published image back down and run
+  it** — with no manual steps, entirely on free GitHub infrastructure.
+  This is the real "CD" (Continuous **Deployment**), not just delivery.
+
 ## What's next (not done yet)
 
-- [ ] Verify the package appears in the repo's "Packages" section on
-      GitHub, and try `docker pull ghcr.io/<owner>/docker_cicd:latest`
-      locally to confirm the published image actually works.
-- [ ] Confirm the next CI run publishes both `:latest` and the
-      `:<short-sha>` tag (check the Packages page for two tags).
-- [ ] (Optional, further out) **Deploy** — have something actually pull
-      and run the published image somewhere (this would be the real "CD"
-      in the fullest sense — right now we publish, but nothing consumes
-      it automatically yet).
+- [ ] Verify the Packages page shows **two** tags on `docker_cicd`
+      (`latest` and `ff05282`), and try
+      `docker pull ghcr.io/<owner>/docker_cicd:latest` locally to confirm
+      the published image actually works.
+- [ ] Confirm the next CI run shows both the `test` and `deploy` jobs
+      running (in that order) on the Actions tab.
+- [ ] (Further out, real infra) Deploy to an actual server or platform
+      (e.g. a VM or Render/Fly.io) instead of simulating it inside GitHub
+      Actions — the natural next step once comfortable with this pattern.
 
 ---
 
