@@ -189,17 +189,23 @@ Added a second job, `deploy`, to `ci.yml`:
   it** — with no manual steps, entirely on free GitHub infrastructure.
   This is the real "CD" (Continuous **Deployment**), not just delivery.
 
+**Confirmed:** CI #9 (commit `8ef5c80`) ran green — both the `test` job
+(build, test, publish) and the new `deploy` job (pull, run) succeeded, in
+order. Full build → test → publish → pull → run loop confirmed working,
+fully automated, on every push to `main`.
+
 ## What's next (not done yet)
 
-- [ ] Verify the Packages page shows **two** tags on `docker_cicd`
-      (`latest` and `ff05282`), and try
-      `docker pull ghcr.io/<owner>/docker_cicd:latest` locally to confirm
-      the published image actually works.
-- [ ] Confirm the next CI run shows both the `test` and `deploy` jobs
-      running (in that order) on the Actions tab.
 - [ ] (Further out, real infra) Deploy to an actual server or platform
       (e.g. a VM or Render/Fly.io) instead of simulating it inside GitHub
-      Actions — the natural next step once comfortable with this pattern.
+      Actions.
+- [ ] (Further out, real workflow) Practice a PR-based workflow: push to
+      a feature branch, open a pull request, watch CI run on the PR
+      *before* merging, then merge to `main` to trigger CD — closer to
+      how a real team works than pushing straight to `main`.
+- [ ] Once comfortable with the above, consider applying these same
+      CI/CD patterns to `KMC_Automation` — only when explicitly decided,
+      since that's a real system with real UAT billing data.
 
 ---
 
