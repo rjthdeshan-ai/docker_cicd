@@ -90,7 +90,7 @@ etc. than the raw runner. Building through Docker in CI closes that gap.
   no **CD** (Continuous Deployment) yet — a passing build doesn't publish
   or deploy anything anywhere.
 
-## Step 5: Add CD — push image to GHCR (commit pending)
+## Step 5: Add CD — push image to GHCR (commit `56ca026`)
 
 Added two steps to `ci.yml`, after the tests pass:
 
@@ -120,12 +120,27 @@ Also added `permissions: packages: write` to the job, so the automatic
 - Result: on every push to `main` with passing tests, a fresh image lands
   at `ghcr.io/<owner>/docker_cicd:latest`, ready to `docker pull`.
 
+**Confirmed:** CI #6 (commit `56ca026`) ran green — build, test, GHCR
+login, and image push all succeeded.
+
 ## What's next (not done yet)
 
-- [ ] Confirm the GHCR push actually succeeds and the package shows up
-      under the GitHub repo's "Packages" section.
+- [ ] Verify the package appears in the repo's "Packages" section on
+      GitHub, and try `docker pull ghcr.io/<owner>/docker_cicd:latest`
+      locally to confirm the published image actually works.
 - [ ] (Optional, further out) **Deploy** — have something actually pull
-      and run the published image somewhere.
+      and run the published image somewhere (this would be the real "CD"
+      in the fullest sense — right now we publish, but nothing consumes
+      it automatically yet).
+
+---
+
+## Where we are now (updated)
+
+Full CI/CD loop is working end-to-end for this toy app:
+push to `main` → Docker image built → tests run inside the container →
+on success, image is tagged and published to GHCR. This is the same
+pattern a real project would use before adding an actual deployment step.
 
 ## End goal of this practice repo
 
