@@ -123,11 +123,37 @@ Also added `permissions: packages: write` to the job, so the automatic
 **Confirmed:** CI #6 (commit `56ca026`) ran green — build, test, GHCR
 login, and image push all succeeded.
 
+## Step 6: Tag images by commit SHA, not just `:latest` (commit pending)
+
+Updated the "Tag and push image to GHCR" step in `ci.yml`:
+
+```yaml
+- name: Tag and push image to GHCR
+  if: github.ref == 'refs/heads/main'
+  run: |
+    SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+    docker tag docker_cicd ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+    docker tag docker_cicd ghcr.io/${{ github.repository_owner }}/docker_cicd:$SHORT_SHA
+    docker push ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+    docker push ghcr.io/${{ github.repository_owner }}/docker_cicd:$SHORT_SHA
+```
+
+**Why:** before, every push overwrote `:latest` with nothing to fall back
+to. `github.sha` is a built-in variable — the full 40-character commit hash
+of whatever commit triggered the run — and `cut -c1-7` shortens it to match
+the short hashes already used in this file (e.g. `56ca026`). Now every push
+to `main` publishes **two** tags: `:latest` (always newest) and a permanent
+`:<short-sha>` tag that's never overwritten. If a future deploy breaks, you
+can roll back to any exact past build by its commit SHA instead of only
+ever having whatever `latest` currently points to.
+
 ## What's next (not done yet)
 
 - [ ] Verify the package appears in the repo's "Packages" section on
       GitHub, and try `docker pull ghcr.io/<owner>/docker_cicd:latest`
       locally to confirm the published image actually works.
+- [ ] Confirm the next CI run publishes both `:latest` and the
+      `:<short-sha>` tag (check the Packages page for two tags).
 - [ ] (Optional, further out) **Deploy** — have something actually pull
       and run the published image somewhere (this would be the real "CD"
       in the fullest sense — right now we publish, but nothing consumes

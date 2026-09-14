@@ -26,5 +26,8 @@ jobs:
       - name: Tag and push image to GHCR
         if: github.ref == 'refs/heads/main'
         run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           docker tag docker_cicd ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+          docker tag docker_cicd ghcr.io/${{ github.repository_owner }}/docker_cicd:$SHORT_SHA
           docker push ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+          docker push ghcr.io/${{ github.repository_owner }}/docker_cicd:$SHORT_SHA
