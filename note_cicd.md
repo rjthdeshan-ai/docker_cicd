@@ -90,11 +90,42 @@ etc. than the raw runner. Building through Docker in CI closes that gap.
   no **CD** (Continuous Deployment) yet — a passing build doesn't publish
   or deploy anything anywhere.
 
+## Step 5: Add CD — push image to GHCR (commit pending)
+
+Added two steps to `ci.yml`, after the tests pass:
+
+```yaml
+- name: Log in to GitHub Container Registry
+  if: github.ref == 'refs/heads/main'
+  run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+- name: Tag and push image to GHCR
+  if: github.ref == 'refs/heads/main'
+  run: |
+    docker tag docker_cicd ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+    docker push ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+```
+
+Also added `permissions: packages: write` to the job, so the automatic
+`GITHUB_TOKEN` is allowed to publish packages/images.
+
+**How it works:**
+- `GITHUB_TOKEN` is auto-generated per run by GitHub Actions — no secrets
+  to create manually.
+- The `if: github.ref == 'refs/heads/main'` guard means images are only
+  published from the `main` branch, not from every PR/branch.
+- These steps run *after* "Run tests inside Docker container" — if tests
+  fail, the job stops and nothing gets pushed. That's the actual CI → CD
+  link: only tested, working images get published.
+- Result: on every push to `main` with passing tests, a fresh image lands
+  at `ghcr.io/<owner>/docker_cicd:latest`, ready to `docker pull`.
+
 ## What's next (not done yet)
 
-- [ ] **Learn CD (Continuous Deployment)** — e.g., push the built Docker
-      image to a registry (Docker Hub / GHCR) automatically when tests pass,
-      so there's a real, taggable, pullable artifact for every green build.
+- [ ] Confirm the GHCR push actually succeeds and the package shows up
+      under the GitHub repo's "Packages" section.
+- [ ] (Optional, further out) **Deploy** — have something actually pull
+      and run the published image somewhere.
 
 ## End goal of this practice repo
 

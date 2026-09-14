@@ -7,6 +7,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
@@ -15,3 +18,13 @@ jobs:
 
       - name: Run tests inside Docker container
         run: docker run docker_cicd
+
+      - name: Log in to GitHub Container Registry
+        if: github.ref == 'refs/heads/main'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Tag and push image to GHCR
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker tag docker_cicd ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
+          docker push ghcr.io/${{ github.repository_owner }}/docker_cicd:latest
